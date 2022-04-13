@@ -10,8 +10,11 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 
 struct ContentView: View {
+    //  MARK: Variables and constants for the application
     @State private var image: Image?
     @State private var filterIntensity = 0.5
+    @State private var filterRadius = 5.0
+    @State private var filterScale = 5.0
     
     @State private var showingImagePicker = false
     @State private var inputImage: UIImage?
@@ -21,7 +24,9 @@ struct ContentView: View {
     let context = CIContext()
     
     @State private var showingFilterSheet = false
+    @State private var showingSaveError = false
     
+    //  MARK: Body of ContentView. Displays UI elements.
     var body: some View {
         NavigationView {
             VStack {
@@ -41,12 +46,32 @@ struct ContentView: View {
                     showingImagePicker = true
                 }
                 
-                HStack {
-                    Text("Intensity")
-                    Slider(value: $filterIntensity)
-                        .onChange(of: filterIntensity) { _ in applyProcessing()}
+                if currentFilter.inputKeys.contains(kCIInputIntensityKey) {
+                    HStack {
+                        Text("Intensity")
+                        Slider(value: $filterIntensity)
+                            .onChange(of: filterIntensity) { _ in applyProcessing()}
+                    }
+                    .padding(.vertical)
                 }
-                .padding(.vertical)
+                
+                if currentFilter.inputKeys.contains(kCIInputRadiusKey) {
+                    HStack {
+                        Text("Radius")
+                        Slider(value: $filterRadius, in: 0...200)
+                            .onChange(of: filterRadius) { _ in applyProcessing()}
+                    }
+                    .padding(.vertical)
+                }
+                
+                if currentFilter.inputKeys.contains(kCIInputScaleKey) {
+                    HStack {
+                        Text("Scale")
+                        Slider(value: $filterScale, in: 0...20)
+                            .onChange(of: filterScale) { _ in applyProcessing()}
+                    }
+                    .padding(.vertical)
+                }
                 
                 HStack {
                     Button("Change Filter") {
@@ -56,6 +81,7 @@ struct ContentView: View {
                     Spacer()
                     
                     Button("Save", action: save)
+                        .disabled(inputImage == nil)
                 }
             }
             .padding([.horizontal, .bottom])
@@ -65,23 +91,45 @@ struct ContentView: View {
                 ImagePicker(image: $inputImage)
             }
             .confirmationDialog("Select a filter", isPresented: $showingFilterSheet) {
+                //  Filters
                 Group {
+                    Button("Sepia Tone") { setFilter(CIFilter.sepiaTone()) }
                     Button("Crystallize") { setFilter(CIFilter.crystallize()) }
                     Button("Edges") { setFilter(CIFilter.edges()) }
-                    Button("Gaussian Blur") { setFilter(CIFilter.gaussianBlur()) }
                     Button("Pixellate") { setFilter(CIFilter.pixellate()) }
-                    Button("Sepia Tone") { setFilter(CIFilter.sepiaTone()) }
                     Button("Unsharp Mask") { setFilter(CIFilter.unsharpMask()) }
                     Button("Vignette") { setFilter(CIFilter.vignette()) }
+                    Button("Bloom") { setFilter(CIFilter.bloom()) }
                 }
                 
+                //  Blurs
+                Group {
+                    Button("Gaussian Blur") { setFilter(CIFilter.gaussianBlur()) }
+                    Button("Disc Blur") { setFilter(CIFilter.discBlur()) }
+                    Button("Bokeh Blur") { setFilter(CIFilter.bokehBlur()) }
+                }
+                
+                //  Effects
+                Group {
+                    Button("Noir") { setFilter(CIFilter.photoEffectNoir()) }
+                    Button("Fade") { setFilter(CIFilter.photoEffectFade()) }
+                    Button("Mono") { setFilter(CIFilter.photoEffectMono()) }
+                }
+                
+                //  Cancel Button
                 Group {
                     Button("Cancel", role: .cancel) { }
                 }
             }
+            .alert("Oops!", isPresented: $showingSaveError) {
+                Button("OK") {}
+            } message: {
+                Text("Something went wrong when saving your photo - please check if you have allowed this app to save photos to your device.")
+            }
         }
     }
     
+    // MARK: Functions for loading, saving, and filters
     func loadImage() {
         guard let inputImage = inputImage else { return }
        
@@ -113,10 +161,10 @@ struct ContentView: View {
             currentFilter.setValue(filterIntensity, forKey: kCIInputIntensityKey)
         }
         if inputKeys.contains(kCIInputRadiusKey) {
-            currentFilter.setValue(filterIntensity * 200, forKey: kCIInputRadiusKey)
+            currentFilter.setValue(filterRadius, forKey: kCIInputRadiusKey)
         }
         if inputKeys.contains(kCIInputScaleKey) {
-            currentFilter.setValue(filterIntensity * 20, forKey: kCIInputScaleKey)
+            currentFilter.setValue(filterScale, forKey: kCIInputScaleKey)
         }
         
         guard let outputImage = currentFilter.outputImage else { return }
