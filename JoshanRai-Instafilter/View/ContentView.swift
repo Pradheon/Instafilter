@@ -25,6 +25,7 @@ struct ContentView: View {
     
     @State private var showingFilterSheet = false
     @State private var showingSaveError = false
+    @State private var showingSettingsScreen = false
     
     //  MARK: Body of ContentView. Displays UI elements.
     var body: some View {
@@ -125,6 +126,18 @@ struct ContentView: View {
                 Button("OK") {}
             } message: {
                 Text("Something went wrong when saving your photo - please check if you have allowed this app to save photos to your device.")
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingSettingsScreen.toggle()
+                    } label: {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSettingsScreen) {
+                SettingsView()
             }
         }
     }
